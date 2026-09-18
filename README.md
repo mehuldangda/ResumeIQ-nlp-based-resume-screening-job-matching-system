@@ -322,21 +322,7 @@ python -m unittest discover -s tests
 ![System Workflow](assets/screenshots/workflow.png)
 
 ---
-
-## 14. Demo Video
-
-Demonstration recordings and recording guidelines are located in [`assets/demo_videos/`](assets/demo_videos/README.md).
-
-To record your own walkthrough:
-
-1. Capture the Home screen resume upload.
-2. Showcase the real-time skill extraction.
-3. Review the detailed Results score breakdown and skill gaps.
-4. Demonstrate the Job Recommendations ranking.
-
----
-
-## 15. Example Input and Output
+## 14. Example Input and Output
 
 ### Example Input
 
@@ -393,7 +379,7 @@ To record your own walkthrough:
 
 ---
 
-## 16. Limitations
+## 15. Limitations
 
 - **Predefined Skill Dictionary**: Skill identification relies on a curated list of technical keywords; emerging or niche acronyms may require updating `TECH_SKILLS`.
 - **Maximum Sequence Length**: Transformer inputs are truncated at 512 subword tokens per sentence batch.
@@ -401,7 +387,7 @@ To record your own walkthrough:
 
 ---
 
-## 17. Future Improvements
+## 16. Future Improvements
 
 - [ ] **Live Job API Integration**: Connect to LinkedIn, Indeed, or Adzuna APIs for real-time live job matching.
 - [ ] **Dynamic NER Model**: Train a custom spaCy or BERT Named Entity Recognition (NER) model for open-vocabulary skill and entity discovery.
@@ -410,7 +396,7 @@ To record your own walkthrough:
 
 ---
 
-## 18. Contribution Guidelines
+## 17. Contribution Guidelines
 
 Contributions are welcome! Please follow these steps:
 
@@ -423,14 +409,14 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## 19. License
+## 18. License
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete details.
 
 ---
 
-## 20. Author & Acknowledgements
+## 29. Author & Acknowledgements
 
-- **Author**: ResumeIQ Team / Open-Source Contributors
+- **Author**: Mehul Dangda IT'27 @ SKIT Jaipur.
 - **Models**: [Hugging Face sentence-transformers](https://huggingface.co/sentence-transformers/bert-base-nli-mean-tokens)
 - **Frameworks**: [Streamlit](https://streamlit.io/), [PyTorch](https://pytorch.org/), [Scikit-learn](https://scikit-learn.org/)
