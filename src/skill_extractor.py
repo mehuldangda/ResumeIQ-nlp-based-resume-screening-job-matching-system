@@ -1,46 +1,57 @@
 """
 Technical skill extraction and skill match computation for ResumeIQ.
+Uses word-boundary regular expressions to detect technical competencies
+from unstructured text.
 """
 
 import re
-from typing import List
+from typing import List, Optional
 
-# Standard tech skills dictionary
+# Standard catalog of technical skills spanning languages, frameworks, databases, and DevOps
 TECH_SKILLS = [
+    # Programming Languages
     "python", "java", "c++", "c", "javascript", "typescript",
-    "html", "css", "react", "angular", "node.js", "express",
-    "mongodb", "mysql", "sql", "postgresql",
-    "pandas", "numpy", "scikit-learn", "tensorflow", "pytorch",
-    "machine learning", "deep learning", "nlp",
-    "streamlit", "flask", "django",
-    "git", "github", "docker",
+    "html", "css", "sql", "r", "go", "rust",
+    # Frontend & Backend Frameworks
+    "react", "angular", "vue", "node.js", "express", "django", "flask", "fastapi", "streamlit",
+    # Databases & Storage
+    "mongodb", "mysql", "postgresql", "sqlite", "redis", "cassandra",
+    # Data Science, Machine Learning & Deep Learning
+    "pandas", "numpy", "scipy", "scikit-learn", "tensorflow", "pytorch", "keras",
+    "machine learning", "deep learning", "nlp", "computer vision",
+    "statistics", "data analysis", "data visualization", "matplotlib", "seaborn",
+    # DevOps, Cloud & Tools
+    "git", "github", "docker", "kubernetes", "aws", "azure", "gcp", "linux",
+    # Analytics & Business Intelligence
     "power bi", "tableau", "excel",
-    "aws", "azure", "gcp",
-    "statistics", "data analysis", "data visualization",
-    "rest api", "rest apis", "api",
+    # APIs & Engineering Practices
+    "rest api", "rest apis", "api", "graphql", "microservices",
     "feature engineering", "model training", "model evaluation",
-    "data preprocessing", "computer vision", "keras",
-    "scipy", "matplotlib", "seaborn"
+    "data preprocessing", "data structures", "oop"
 ]
 
 
-def extract_skills(text: str) -> List[str]:
+def extract_skills(text: Optional[str]) -> List[str]:
     """
-    Extract technical skills from text using word boundary regex matching.
+    Extract technical skills from text using word-boundary regular expressions.
+
+    The word boundary pattern `\\b<skill>\\b` ensures that exact terms are matched
+    without false positives from sub-strings (e.g., prevents matching "c" inside "react").
 
     Args:
-        text: Input text string (resume or job description).
+        text: Input text string (candidate resume or job description).
 
     Returns:
-        Sorted list of unique extracted technical skills.
+        List[str]: Alphabetically sorted list of unique extracted technical skills.
     """
-    if not text:
+    if not text or not isinstance(text, str):
         return []
 
     text_lower = text.lower()
     found_skills = []
 
     for skill in TECH_SKILLS:
+        # Match complete words/phrases with boundary checks
         pattern = r"\b" + re.escape(skill.lower()) + r"\b"
         if re.search(pattern, text_lower):
             found_skills.append(skill)
@@ -50,17 +61,21 @@ def extract_skills(text: str) -> List[str]:
 
 def calculate_skill_match(resume_skills: List[str], jd_skills: List[str]) -> float:
     """
-    Calculate the percentage of required JD skills present in the resume.
+    Calculate the percentage of required job description skills present in the resume.
+
+    Formula:
+        Skill Match % = (|Resume Skills ∩ JD Skills| / |JD Skills|) * 100
 
     Args:
-        resume_skills: List of skills detected in resume.
-        jd_skills: List of skills detected in job description.
+        resume_skills: List of skills detected in the candidate resume.
+        jd_skills: List of skills detected in the target job description.
 
     Returns:
-        Skill match percentage (0.0 to 100.0).
+        float: Skill match percentage between 0.0 and 100.0.
     """
     if not jd_skills:
         return 0.0
 
     matched_skills = set(resume_skills).intersection(set(jd_skills))
-    return (len(matched_skills) / len(jd_skills)) * 100.0
+    score = (len(matched_skills) / len(jd_skills)) * 100.0
+    return round(score, 2)

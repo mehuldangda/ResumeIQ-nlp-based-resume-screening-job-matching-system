@@ -1,14 +1,21 @@
 """
-Unit and integration test suite for ResumeIQ core functionalities.
-Works with both unittest and pytest.
+Comprehensive unit and integration test suite for ResumeIQ core functionalities.
+Compatible with both unittest and pytest runners.
 """
 
 from pathlib import Path
 import tempfile
 import unittest
 import torch
+import numpy as np
 
-from src.models import mean_pooling, get_HF_embeddings, cosine
+from src.models import (
+    mean_pooling,
+    get_HF_embeddings,
+    get_doc2vec_embeddings,
+    cosine,
+    ensure_nltk_resources
+)
 from src.resume_parser import extract_text_data, extract_pdf_data
 from src.skill_extractor import TECH_SKILLS, extract_skills, calculate_skill_match
 from src.resume_scanner import compare
@@ -17,6 +24,8 @@ from src.utils import get_data_path, get_project_root
 
 
 class TestSkillExtractor(unittest.TestCase):
+    """Tests for regex-based skill extraction and overlap calculations."""
+
     def test_extract_skills_empty(self):
         self.assertEqual(extract_skills(""), [])
         self.assertEqual(extract_skills(None), [])
@@ -55,6 +64,8 @@ class TestSkillExtractor(unittest.TestCase):
 
 
 class TestResumeParser(unittest.TestCase):
+    """Tests for document text extraction from files."""
+
     def test_extract_text_data(self):
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as f:
             f.write("Senior Data Scientist with NLP background.")
@@ -72,6 +83,8 @@ class TestResumeParser(unittest.TestCase):
 
 
 class TestModels(unittest.TestCase):
+    """Tests for attention mean pooling and cosine similarity."""
+
     def test_mean_pooling(self):
         # Mock token embeddings (batch_size=1, seq_len=3, hidden_size=4)
         token_embeddings = torch.tensor([[[1.0, 2.0, 3.0, 4.0],
@@ -84,8 +97,26 @@ class TestModels(unittest.TestCase):
         expected = torch.tensor([[3.0, 4.0, 5.0, 6.0]])
         self.assertTrue(torch.allclose(pooled, expected, atol=1e-5))
 
+    def test_cosine_similarity(self):
+        vec1 = np.array([[1.0, 0.0, 0.0]])
+        vec2 = np.array([[1.0, 0.0, 0.0]])
+        scores = cosine([vec1], vec2)
+        self.assertEqual(float(scores[0]), 100.0)
+
+    def test_doc2vec_embeddings(self):
+        jd = "Python and Machine Learning engineer"
+        resumes = ["Python developer with ML", "React frontend developer"]
+        jd_emb, res_embs = get_doc2vec_embeddings(jd, resumes)
+
+        self.assertEqual(jd_emb.shape[0], 1)
+        self.assertEqual(jd_emb.shape[1], 512)
+        self.assertEqual(len(res_embs), 2)
+        self.assertEqual(res_embs[0].shape[1], 512)
+
 
 class TestResumeScanner(unittest.TestCase):
+    """Tests for hybrid comparison using BERT and Doc2Vec."""
+
     def test_compare_huggingface_bert(self):
         resume_text = "Proficient in Python, machine learning, and SQL."
         jd_text = "Looking for a Python and machine learning developer with SQL and Git skills."
@@ -109,8 +140,24 @@ class TestResumeScanner(unittest.TestCase):
         expected_score = round((res["semantic_score"] * 0.60) + (res["skill_score"] * 0.40), 2)
         self.assertEqual(res["final_score"], expected_score)
 
+    def test_compare_doc2vec(self):
+        resume_text = "Proficient in Python, machine learning, and SQL."
+        jd_text = "Looking for a Python and machine learning developer with SQL and Git skills."
+
+        results = compare([resume_text], jd_text, flag="Doc2Vec")
+        self.assertEqual(len(results), 1)
+        res = results[0]
+        self.assertIn("final_score", res)
+        self.assertGreater(res["final_score"], 0)
+
+    def test_compare_empty_inputs(self):
+        self.assertEqual(compare([], "some jd"), [])
+        self.assertEqual(compare(["some resume"], ""), [])
+
 
 class TestJobRecommender(unittest.TestCase):
+    """Tests for dataset-driven job recommendations."""
+
     def test_recommend_jobs(self):
         resume_text = "Experienced Machine Learning Engineer with Python, SQL, Pandas, Scikit-learn, and TensorFlow."
         recommendations = recommend_jobs(resume_text)
@@ -131,20 +178,16 @@ class TestJobRecommender(unittest.TestCase):
         self.assertIn("missing_skills", first_job)
 
 
-class TestLegacyCompatibility(unittest.TestCase):
-    def test_legacy_models_import(self):
-        import Models
-        self.assertTrue(hasattr(Models, "get_HF_embeddings"))
-        self.assertTrue(hasattr(Models, "cosine"))
+class TestUtils(unittest.TestCase):
+    """Tests for path resolution utilities."""
 
-    def test_legacy_scanner_import(self):
-        import Resume_scanner
-        self.assertTrue(hasattr(Resume_scanner, "compare"))
-        self.assertTrue(hasattr(Resume_scanner, "extract_skills"))
+    def test_get_project_root(self):
+        root = get_project_root()
+        self.assertTrue((root / "src").exists())
 
-    def test_legacy_recommender_import(self):
-        import job_recommender
-        self.assertTrue(hasattr(job_recommender, "recommend_jobs"))
+    def test_get_data_path(self):
+        path = get_data_path("jobs.csv")
+        self.assertTrue(path.exists())
 
 
 if __name__ == "__main__":

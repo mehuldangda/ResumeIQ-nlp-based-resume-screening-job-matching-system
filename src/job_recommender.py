@@ -1,6 +1,7 @@
 """
 Job recommendation engine for ResumeIQ.
-Matches candidate resumes against a database of available career opportunities.
+Matches candidate resumes against a database of available career opportunities
+and returns ranked results.
 """
 
 from pathlib import Path
@@ -13,18 +14,23 @@ from src.utils import get_data_path
 
 def recommend_jobs(
     resume_text: str,
-    jobs_file: Optional[Union[str, Path]] = None
+    jobs_file: Optional[Union[str, Path]] = None,
+    flag: str = "HuggingFace-BERT"
 ) -> List[Dict[str, Any]]:
     """
-    Recommend jobs from the jobs dataset ranked by match score.
+    Recommend jobs from the jobs catalog ranked by hybrid match score in descending order.
 
     Args:
-        resume_text: Resume plain text.
+        resume_text: Candidate resume plain text.
         jobs_file: Optional path to jobs dataset CSV. If None, resolves data/jobs.csv.
+        flag: Embedding model flag ("HuggingFace-BERT" or "Doc2Vec").
 
     Returns:
-        List of recommended jobs sorted in descending order of match score.
+        List[Dict[str, Any]]: List of recommended jobs sorted descending by match score.
     """
+    if not resume_text or not resume_text.strip():
+        return []
+
     if jobs_file is None:
         target_path = get_data_path("jobs.csv")
     else:
@@ -33,16 +39,22 @@ def recommend_jobs(
     if not target_path.exists():
         raise FileNotFoundError(f"Jobs dataset not found at: {target_path}")
 
-    jobs = pd.read_csv(target_path)
+    jobs_df = pd.read_csv(target_path)
     recommendations = []
 
-    for _, job in jobs.iterrows():
-        job_desc = str(job.get("job_description", ""))
-        job_title = str(job.get("job_title", "Unknown Role"))
-        company = str(job.get("company", "Unknown Company"))
+    for _, job in jobs_df.iterrows():
+        job_desc = str(job.get("job_description", "")).strip()
+        job_title = str(job.get("job_title", "Unknown Role")).strip()
+        company = str(job.get("company", "Unknown Company")).strip()
 
-        result = compare([resume_text], job_desc, flag="HuggingFace-BERT")[0]
+        if not job_desc:
+            continue
 
+        comparison_results = compare([resume_text], job_desc, flag=flag)
+        if not comparison_results:
+            continue
+
+        result = comparison_results[0]
         recommendations.append({
             "job_title": job_title,
             "company": company,
@@ -53,7 +65,7 @@ def recommend_jobs(
             "missing_skills": result["missing_skills"]
         })
 
-    # Sort descending by final match score
+    # Sort in descending order of final match score
     recommendations.sort(key=lambda x: x["match_score"], reverse=True)
 
     return recommendations
