@@ -1,0 +1,52 @@
+name: Keep Streamlit Apps Awake
+
+on:
+  schedule:
+    - cron: "0 */8 * * *"
+  workflow_dispatch:
+
+jobs:
+  wake-apps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Python setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Playwright install
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Visit all apps
+        run: |
+          python - <<'EOF'
+          from playwright.sync_api import sync_playwright
+
+          URLS = [
+              "https://diagnowise-ml.streamlit.app/",
+              "https://resumeiq-nlp.streamlit.app/",
+          ]
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              for url in URLS:
+                  page = browser.new_page()
+                  try:
+                      page.goto(url, timeout=90000)
+                      page.wait_for_timeout(8000)
+                      btn = page.get_by_role("button", name="Yes, get this app back up!")
+                      if btn.count() > 0:
+                          btn.first.click()
+                          print(f"[WOKE UP] {url}")
+                          page.wait_for_timeout(30000)
+                      else:
+                          print(f"[ALREADY AWAKE] {url}")
+                          page.wait_for_timeout(10000)
+                  except Exception as e:
+                      print(f"[ERROR] {url}: {e}")
+                  finally:
+                      page.close()
+              browser.close()
+          EOF
